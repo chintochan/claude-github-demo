@@ -1,0 +1,127 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Dealer {
+  id          String   @id @default(cuid())
+  name        String
+  address     String
+  city        String
+  state       String
+  zipCode     String
+  latitude    Float
+  longitude   Float
+  phone       String?
+  website     String?
+  isVerified  Boolean  @default(false)
+  verifiedAt  DateTime?
+
+  // Computed fields (calculated from reports)
+  averageMarkup Float   @default(0)
+  totalReports  Int     @default(0)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  reports     MarkupReport[]
+  reviews     Review[]
+
+  @@index([city, state])
+  @@index([latitude, longitude])
+  @@index([isVerified])
+}
+
+model MarkupReport {
+  id          String   @id @default(cuid())
+
+  // Vehicle info
+  make        String
+  model       String
+  year        Int
+  trim        String?
+
+  // Markup details
+  msrp        Float
+  dealerPrice Float
+  markupAmount Float
+  markupPercent Float
+
+  // Additional details
+  description String?
+  purchaseDate DateTime?
+
+  // Photos
+  photoUrls   String[]
+
+  // Reporter info (optional for anonymous reports)
+  reporterName  String?
+  reporterEmail String?
+  isAnonymous   Boolean @default(false)
+
+  // Verification status
+  isVerified  Boolean  @default(false)
+  verifiedAt  DateTime?
+
+  dealerId    String
+  dealer      Dealer   @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([make, model, year])
+  @@index([dealerId])
+  @@index([createdAt])
+}
+
+model Review {
+  id          String   @id @default(cuid())
+
+  rating      Int      // 1-5 stars
+  title       String
+  content     String
+
+  // Purchase details
+  purchaseDate DateTime?
+  vehiclePurchased String? // "2024 Honda Accord"
+
+  // Reviewer info
+  reviewerName  String
+  reviewerEmail String?
+  isVerified    Boolean @default(false)
+
+  dealerId    String
+  dealer      Dealer   @relation(fields: [dealerId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([dealerId])
+  @@index([rating])
+  @@index([createdAt])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  role      UserRole @default(USER)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  DEALER
+}
